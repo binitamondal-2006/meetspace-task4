@@ -13,7 +13,7 @@ const rooms=new Map();
 function userFromToken(token){try{return jwt.verify(token,process.env.JWT_SECRET||'dev-secret-change-me')}catch{return null}}
 io.use((socket,next)=>{const u=userFromToken(socket.handshake.auth?.token);if(!u)return next(new Error('Unauthorized'));socket.user=u;next()});
 io.on('connection',socket=>{
- socket.on('room:join',roomId=>{roomId=String(roomId||'').trim().slice(0,80);if(!roomId)return; socket.join(roomId); const set=rooms.get(roomId)||new Set(); set.add(socket.id);rooms.set(roomId,set); const peers=[...set].filter(id=>id!==socket.id).map(id=>io.sockets.sockets.get(id)?.user).filter(Boolean);socket.emit('room:peers',peers);socket.to(roomId).emit('room:user-joined',{id:socket.id,user:socket.user});});
+ socket.on('room:join',roomId=>{roomId=String(roomId||'').trim().slice(0,80);if(!roomId)return; socket.join(roomId); const set=rooms.get(roomId)||new Set(); set.add(socket.id);rooms.set(roomId,set); const peers=[...set].filter(id=>id!==socket.id).map(id=>({id,user:io.sockets.sockets.get(id)?.user})).filter(p=>p.user);socket.emit('room:peers',peers);socket.to(roomId).emit('room:user-joined',{id:socket.id,user:socket.user});});
  socket.on('signal',({to,data})=>{if(to)io.to(to).emit('signal',{from:socket.id,data,user:socket.user})});
  socket.on('whiteboard:draw',({roomId,stroke})=>{socket.to(roomId).emit('whiteboard:draw',stroke)});
  socket.on('whiteboard:clear',roomId=>socket.to(roomId).emit('whiteboard:clear'));
